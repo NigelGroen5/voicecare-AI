@@ -1,0 +1,42 @@
+body {
+    width: 250px;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+  
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+h1 {
+    color: #473fdf;
+    font-size: 20px;
+}
+  
+button {
+    width: 48px;
+    height: 48px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+button img {
+    margin-top: auto;
+    width: 75px;
+    height: 75px;
+  }
+
+button:hover {
+    transform: scale(1.05);
+  }
+  
+button:active {
+    transform: scale(0.95);
+  }
