@@ -1,6 +1,6 @@
 body {
-    width: 250px;
-    padding: 16px;
+    width: 320px;
+    padding: 18px 16px 16px;
     font-family: Arial, sans-serif;
   
     display: flex;
@@ -9,12 +9,13 @@ body {
     text-align: center;
   }
   
-h1 {
-    color: #473fdf;
-    font-size: 20px;
-}
+  h1 {
+    color: #3d36c5;
+    font-size: 28px;
+    margin: 10px 0 20px;
+  }
   
-button {
+  .icon-button {
     width: 48px;
     height: 48px;
     background: white;
@@ -26,17 +27,66 @@ button {
     align-items: center;
     justify-content: center;
   }
-
-button img {
-    margin-top: auto;
-    width: 75px;
-    height: 75px;
-  }
-
-button:hover {
+  
+  .icon-button:hover {
     transform: scale(1.05);
+    filter: brightness(1.02);
   }
   
-button:active {
+  .icon-button:active {
     transform: scale(0.95);
   }
+  
+  .icon-button img {
+    width: 75px;
+    height: 75px;
+    object-fit: contain;
+  }
+  
+  .status {
+    margin-top: 15px;
+    font-size: 13px;
+    color: #555;
+  }
+  
+  .try-saying {
+    width: 100%;
+    margin-top: 14px;
+    text-align: left;
+  }
+  
+  .try-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+  }
+  
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .chip {
+    border: 1px solid #ddd;
+    background: #f7f7ff;
+    color: #333;
+    border-radius: 999px;
+    padding: 8px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  
+  .chip:hover {
+    transform: translateY(-1px);
+    background: #efefff;
+  }
+  
+  .hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #777;
+  }
+  

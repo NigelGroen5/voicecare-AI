@@ -4,12 +4,29 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="styles.css" />
   </head>
+
   <body>
-    <script src="popup.js"></script>
-    
     <h1>VoiceCare AI</h1>
-    <button id="testBtn" class="icon-button">
-      <img id="micBtn" src="mic-icon.jpg" alt="Run" />
+
+    <button id="micBtn" class="icon-button" aria-label="Start voice input">
+      <img id="micImg" src="mic-icon.jpg" alt="" />
     </button>
+
+    <div id="status" class="status">Ready</div>
+
+    <div class="try-saying">
+      <div class="try-title">Try saying…</div>
+
+      <div class="chips" id="chips">
+        <button class="chip" data-prompt="Tell me what I’m looking at">Tell me what I’m looking at</button>
+        <button class="chip" data-prompt="Summarize this page in 3 bullets">Summarize this page in 3 bullets</button>
+        <button class="chip" data-prompt="Explain this more simply">Explain this more simply</button>
+        <button class="chip" data-prompt="What’s the main point of this article?">What’s the main point of this article?</button>
+      </div>
+
+      <div class="hint">Tip: click a prompt to copy it.</div>
+    </div>
+
+    <script src="popup.js"></script>
   </body>
 </html>
