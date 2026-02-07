@@ -2,6 +2,44 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="card">
+      <header class="header">
+        <h1>VoiceCare AI</h1>
+        <div class="subtitle">Instant help from your voice.</div>
+      </header>
+
+      <button id="micBtn" class="icon-button" aria-label="Start voice input">
+        <!-- Mic icon (default) -->
+        <img id="micImg" class="mic-icon" src="mic-icon.jpg" alt="Microphone" />
+        <!-- Stop square (shown when listening) -->
+        <div class="stop-icon" aria-hidden="true"></div>
+      </button>
+
+      <div id="status" class="status">Ready</div>
+
+      <section class="try-saying">
+        <div class="try-title">Try saying…</div>
+
+        <div class="chips" id="chips">
+          <button class="chip" data-prompt="Tell me what I’m looking at">Tell me what I’m looking at</button>
+          <button class="chip" data-prompt="Summarize this page in 3 bullets">Summarize this page in 3 bullets</button>
+          <button class="chip" data-prompt="Explain this more simply">Explain this more simply</button>
+          <button class="chip" data-prompt="What’s the main point of this article?">What’s the main point of this article?</button>
+        </div>
+
+        <div class="hint">Tip: click a prompt to copy it.</div>
+      </section>
+
+      <div class="footer">Privacy: no audio stored.</div>
+
+      <div id="toast" class="toast" aria-live="polite"></div>
+    </div>
+
     <style>
       body { font-family: system-ui, sans-serif; width: 360px; padding: 12px; margin: 0; }
       h1 { font-size: 1.1rem; margin: 0 0 12px 0; }
