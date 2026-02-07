@@ -54,9 +54,6 @@ let pageTextCache = null;
 // Extract once on load
 pageTextCache = extractPageText();
 
-console.log("Stored text length:", pageTextCache?.length || 0);
-console.log("Preview:", (pageTextCache || "").slice(0, 300));
-
 // Listen for request from popup/background
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "GET_PAGE_TEXT") {
