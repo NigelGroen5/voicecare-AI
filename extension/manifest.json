@@ -1,10 +1,10 @@
 {
     "name": "VoiceCare AI",
-    "description": "INSERT DESCRIPTION HERE",
+    "description": "VoiceCare represents a Golden Age where technology adapts to humans as they age — instead of abandoning them when they need it most.",
     "version": "1.0",
     "manifest_version": 3,
     "action": {
       "default_popup": "popup.html",
-      "default_icon": "hello_extensions.png"
+      "default_icon": "mic-icon.jpg"
     }
   }
