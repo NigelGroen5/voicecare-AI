@@ -15,7 +15,8 @@ if (!apiKey) {
 
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+// Prefer a model with reliable free-tier quota (2.0-flash can show limit: 0 for some projects)
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 /**
  * Generate a single text response from Gemini.

@@ -20,8 +20,9 @@ VoiceCare AI with Google Gemini integration.
    Then edit `.env` and set:
    ```
    GEMINI_API_KEY=your_api_key_here
+   GRADIUM_API_KEY=your_gradium_key_here   # optional; for "Read aloud" with Gradium TTS (get at gradium.ai)
    ```
-   You can also use `GOOGLE_API_KEY`; the SDK accepts either.
+   You can also use `GOOGLE_API_KEY`; the Gemini SDK accepts either.
 
 4. **Test the integration**
    ```bash

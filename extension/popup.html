@@ -1,7 +1,34 @@
+<!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body { font-family: system-ui, sans-serif; width: 360px; padding: 12px; margin: 0; }
+      h1 { font-size: 1.1rem; margin: 0 0 12px 0; }
+      button { padding: 10px 16px; font-size: 14px; cursor: pointer; background: #1a73e8; color: #fff; border: none; border-radius: 6px; }
+      button:hover { background: #1557b0; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+      #readBtn { background: #0d652d; }
+      #readBtn:hover { background: #0a4d22; }
+      #stopBtn { background: #5f6368; }
+      #stopBtn:hover { background: #3c4043; }
+      #guideBtn { background: #5e35b1; }
+      #guideBtn:hover { background: #4527a0; }
+      #out { margin-top: 12px; padding: 10px; background: #f5f5f5; border-radius: 6px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; max-height: 320px; overflow-y: auto; }
+      #out.loading { color: #666; }
+      #out.error { background: #fde8e8; color: #c5221f; }
+    </style>
+  </head>
   <body>
     <h1>VoiceCare AI</h1>
-    <button>Test</button>
+    <div class="buttons">
+      <button type="button" id="btn">Summarize page</button>
+      <button type="button" id="guideBtn" style="display: none;" title="Step-by-step: create a document in Google Drive">How do I create a document?</button>
+      <button type="button" id="readBtn" style="display: none;">Read aloud</button>
+      <button type="button" id="stopBtn" style="display: none;">Stop</button>
+    </div>
+    <div id="out" aria-live="polite"></div>
     <script src="popup.js"></script>
   </body>
 </html>
