@@ -62,5 +62,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       url: location.href,
       title: document.title
     });
+    return true; // Required for async response
   }
 });

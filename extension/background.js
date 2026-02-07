@@ -13,6 +13,7 @@ function isDriveOrDocs(url) {
   }
 }
 
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'GET_CURRENT_TAB_URL') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -40,6 +41,78 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const hint = (m.includes('fetch') || m.includes('Failed') || m.includes('Network'))
           ? ' Run "npm run server" in the project folder and try again.' : '';
         sendResponse({ error: m + hint });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.action === 'ASK_QUESTION') {
+    (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id) {
+          sendResponse({ error: 'No active tab' });
+          return;
+        }
+
+        // Get page text for context
+        const page = await new Promise((resolve, reject) => {
+          chrome.tabs.sendMessage(tab.id, { action: 'GET_PAGE_TEXT' }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error('Could not read page. Try refreshing the tab.'));
+              return;
+            }
+            resolve(response);
+          });
+        });
+
+        // Send question with page context to backend
+        const res = await fetch(BACKEND_URL + '/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: msg.question,
+            title: page.title,
+            url: page.url,
+            text: page.text,
+            language: 'en',
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          sendResponse({ error: data.error || 'Backend error' });
+          return;
+        }
+
+        // Get TTS audio for the answer
+        let audioData = null;
+        try {
+          const ttsRes = await fetch(BACKEND_URL + '/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: data.answer }),
+          });
+
+          if (ttsRes.ok) {
+            const ttsData = await ttsRes.json();
+            if (ttsData.audio) {
+              audioData = ttsData.audio;
+            }
+          }
+        } catch (ttsError) {
+          console.error('TTS error:', ttsError);
+          // Continue even if TTS fails
+        }
+
+        sendResponse({ answer: data.answer, audio: audioData });
+      } catch (e) {
+        const msg = e.message || 'Something went wrong';
+        const hint =
+          msg.includes('fetch') || msg.includes('Failed') || msg.includes('Network')
+            ? ' Run "npm run server" in the project folder and try again.'
+            : '';
+        sendResponse({ error: msg + hint });
       }
     })();
     return true;

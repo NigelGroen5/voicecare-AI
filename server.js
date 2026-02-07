@@ -7,7 +7,7 @@
 
 import 'dotenv/config';
 import http from 'http';
-import { generateText, isConfigured, buildSummaryPrompt, buildGuidePrompt } from './src/index.js';
+import { generateText, isConfigured, buildSummaryPrompt, buildGuidePrompt, buildQuestionPrompt } from './src/index.js';
 import { textToSpeech, isGradiumConfigured } from './src/lib/gradium.js';
 
 const PORT = 3000;
@@ -65,6 +65,45 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && (path === '/ask' || path === '/ask/')) {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+
+    let payload;
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      return;
+    }
+
+    try {
+      const prompt = buildQuestionPrompt(
+        {
+          title: payload.title || 'Unknown',
+          url: payload.url || 'Unknown',
+          text: payload.text || '',
+          language: payload.language || 'en',
+        },
+        payload.question || ''
+      );
+      const answer = await generateText(prompt);
+      res.writeHead(200);
+      res.end(JSON.stringify({ answer }));
+    } catch (err) {
+      console.error(err);
+      let msg = err.message || 'Gemini request failed';
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+        msg =
+          'Gemini rate limit reached. Wait a minute or check your quota at https://ai.google.dev/gemini-api/docs/rate-limits';
+      }
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: msg }));
+    }
+    return;
+  }
+
   if (req.method !== 'POST' || (path !== '/summarize' && path !== '/summarize/')) {
     res.writeHead(404);
     res.end(JSON.stringify({ error: 'Not found' }));
@@ -115,5 +154,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`VoiceCare backend running at http://localhost:${PORT}`);
-  console.log('Start the extension and click "Summarize page" on any tab.');
+  console.log('Endpoints: POST /ask, POST /summarize, POST /speak');
+  console.log('Extension ready! Click the microphone or a suggestion chip to start.');
 });

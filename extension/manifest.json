@@ -8,9 +8,13 @@
     "default_popup": "popup.html"
   },
 
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "scripting"],
 
   "host_permissions": ["<all_urls>", "http://localhost:3000/*"],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; media-src 'self' blob: data:"
+  },
 
   "background": {
     "service_worker": "background.js"

@@ -220,3 +220,32 @@ h1 {
   opacity: 1;
   transform: translateX(-50%) translateY(-4px);
 }
+
+/* --- Output Area --- */
+.output {
+  display: none;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--chip);
+  border: 1px solid var(--chipBorder);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  text-align: left;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.output.loading {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.output.error {
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #dc2626;
+}
