@@ -90,6 +90,24 @@ function buildHeuristicGuideAnswer(question, action) {
   ].join('\n');
 }
 
+function shouldUseWhereGuidance(question) {
+  return /\bwhere\b/i.test(String(question || ''));
+}
+
+function buildHighlightCue(question, action) {
+  const q = String(question || '').toLowerCase();
+  const label = String(action?.label || '').trim();
+
+  if (/\b(book|appointment|schedule)\b/.test(q)) return 'Click this to book.';
+  if (/\b(map|directions|location)\b/.test(q)) return 'Click this for the map.';
+  if (/\b(sign in|signin|login|log in)\b/.test(q)) return 'Click this to sign in.';
+  if (/\b(sign up|signup|register|create account)\b/.test(q)) return 'Click this to create an account.';
+  if (/\b(checkout|buy|purchase|pay)\b/.test(q)) return 'Click this to continue checkout.';
+  if (/\b(contact|support|help)\b/.test(q)) return 'Click this to contact support.';
+  if (label) return `Click this: ${label}.`;
+  return 'Click this button.';
+}
+
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'CHECK_URL') {
@@ -155,30 +173,55 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         const page = await sendTabMessage(tab.id, { action: 'GET_PAGE_TEXT' });
-        const actionablesResponse = await sendTabMessage(tab.id, { action: 'GET_ACTIONABLE_ELEMENTS' });
-        const actions = actionablesResponse?.actions || [];
-        const heuristicTarget = selectBestAction(actions, msg.question);
+        const whereMode = shouldUseWhereGuidance(msg.question);
+        let answer = null;
+        let highlight = null;
+        let selectedTarget = null;
 
-        // Ask backend for guided steps + target selector.
-        let guideData = null;
-        const guideRes = await fetch(BACKEND_URL + '/guide', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            question: msg.question,
-            title: page.title,
-            url: page.url,
-            text: page.text,
-            actions,
-            language: 'en',
-          }),
-        });
-        if (guideRes.ok) {
-          guideData = await guideRes.json();
+        if (whereMode) {
+          const actionablesResponse = await sendTabMessage(tab.id, { action: 'GET_ACTIONABLE_ELEMENTS' });
+          const actions = actionablesResponse?.actions || [];
+          const heuristicTarget = selectBestAction(actions, msg.question);
+
+          // Ask backend for guided steps + target selector.
+          let guideData = null;
+          const guideRes = await fetch(BACKEND_URL + '/guide', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: msg.question,
+              title: page.title,
+              url: page.url,
+              text: page.text,
+              actions,
+              language: 'en',
+            }),
+          });
+          if (guideRes.ok) {
+            guideData = await guideRes.json();
+          }
+
+          answer = guideData?.answer;
+          selectedTarget = guideData?.target?.selector ? guideData.target : heuristicTarget;
+
+          if (selectedTarget?.selector) {
+            try {
+              highlight = await sendTabMessage(tab.id, {
+                action: 'HIGHLIGHT_SELECTOR',
+                selector: selectedTarget.selector,
+                note: `Next: ${selectedTarget.label || 'Click here'}`,
+              });
+            } catch (highlightErr) {
+              highlight = { ok: false, reason: highlightErr.message || 'Failed to highlight target' };
+            }
+          }
+
+          if (isNotFoundAnswer(answer) && selectedTarget?.selector) {
+            answer = buildHeuristicGuideAnswer(msg.question, selectedTarget);
+          }
         }
 
-        // Fallback to normal Q&A if guided call fails.
-        let answer = guideData?.answer;
+        // Standard Q&A path (or fallback if guidance did not return answer).
         if (!answer) {
           const res = await fetch(BACKEND_URL + '/ask', {
             method: 'POST',
@@ -199,23 +242,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           answer = data.answer;
         }
 
-        let highlight = null;
-        const selectedTarget = guideData?.target?.selector ? guideData.target : heuristicTarget;
-
-        if (selectedTarget?.selector) {
-          try {
-            highlight = await sendTabMessage(tab.id, {
-              action: 'HIGHLIGHT_SELECTOR',
-              selector: selectedTarget.selector,
-              note: `Next: ${selectedTarget.label || 'Click here'}`,
-            });
-          } catch (highlightErr) {
-            highlight = { ok: false, reason: highlightErr.message || 'Failed to highlight target' };
+        if (whereMode && highlight?.ok && selectedTarget) {
+          const cue = buildHighlightCue(msg.question, selectedTarget);
+          if (!answer.toLowerCase().includes(cue.toLowerCase())) {
+            answer = `${answer}\n\n${cue}`;
           }
-        }
-
-        if (isNotFoundAnswer(answer) && selectedTarget?.selector) {
-          answer = buildHeuristicGuideAnswer(msg.question, selectedTarget);
         }
 
         // Get TTS audio for the answer

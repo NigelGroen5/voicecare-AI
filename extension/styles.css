@@ -291,7 +291,26 @@ h1 {
 
 .output.loading {
   color: var(--muted);
-  font-style: italic;
+  font-style: normal;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.output.loading::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid #c7ccff;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .output.error {

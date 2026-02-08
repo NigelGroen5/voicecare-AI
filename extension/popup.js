@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   let toastTimer = null;
   let recognition = null;
   let recognitionActive = false;
+  let currentAudio = null;
+  let currentAudioUrl = null;
+  let latestRequestId = 0;
 
   // Check page safety status
   async function checkPageSafety() {
@@ -139,6 +142,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
   }
 
+  function stopAudioPlayback() {
+    if (currentAudio) {
+      try {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      } catch {}
+      currentAudio = null;
+    }
+    if (currentAudioUrl) {
+      try { URL.revokeObjectURL(currentAudioUrl); } catch {}
+      currentAudioUrl = null;
+    }
+  }
+
   async function startListening() {
     if (!recognition) {
       showToast("Speech recognition not supported");
@@ -146,6 +163,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
+      // Interrupt TTS so it never talks over the user's voice input.
+      stopAudioPlayback();
+
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("This browser does not support microphone capture");
       }
@@ -210,6 +230,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Function to play audio from base64 WAV
   async function playAudio(base64Audio) {
     try {
+      stopAudioPlayback();
+
       // Convert base64 to audio blob
       const binaryString = atob(base64Audio);
       const bytes = new Uint8Array(binaryString.length);
@@ -218,14 +240,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       const blob = new Blob([bytes], { type: 'audio/wav' });
       const url = URL.createObjectURL(blob);
+      currentAudioUrl = url;
 
       // Create and play audio
       const audio = new Audio(url);
+      currentAudio = audio;
       await audio.play();
 
       // Clean up after playing
       audio.onended = () => {
-        URL.revokeObjectURL(url);
+        if (currentAudioUrl) {
+          URL.revokeObjectURL(currentAudioUrl);
+          currentAudioUrl = null;
+        }
+        currentAudio = null;
       };
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -234,12 +262,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function showLoading() {
-    outputEl.textContent = "Thinking…";
+    outputEl.textContent = "Loading... getting your answer.";
     outputEl.className = "output loading";
-    outputEl.style.display = "block";
+    outputEl.style.display = "flex";
   }
 
   async function handleQuestion(question) {
+    latestRequestId += 1;
+    const requestId = latestRequestId;
+    stopAudioPlayback();
     showLoading();
 
     try {
@@ -248,6 +279,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         action: 'ASK_QUESTION',
         question: question
       });
+
+      if (requestId !== latestRequestId) {
+        return;
+      }
 
       if (!response) {
         showOutput('No response from background script. Try reloading the extension.', true);
@@ -275,6 +310,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast("Response error");
       }
     } catch (error) {
+      if (requestId !== latestRequestId) {
+        return;
+      }
       console.error('Error asking question:', error);
       showOutput(`Failed to get answer: ${error.message}\n\nMake sure:\n1. Backend server is running (npm run server)\n2. Extension has necessary permissions\n3. Try reloading the extension`, true);
       showToast("Connection error");
