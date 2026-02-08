@@ -106,7 +106,7 @@ ${APP_ROLE}
 Task: Answer the user's question about the webpage using ONLY the webpage content provided.
 - If the answer is not present in the content, say exactly: "I can’t find that on this page."
 - If you can answer, cite which section/topic from the page you used in plain words (no URLs needed).
-- Keep the answer short and clear. Use bullets if helpful.
+- Keep the answer short and clear: 1–3 sentences or 2–4 bullets. Max ~80 words.
 
 ${OUTPUT_RULES}
 
