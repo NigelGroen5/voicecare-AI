@@ -200,6 +200,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else if (response.answer) {
         showOutput(response.answer);
         showToast("Answer ready!");
+        if (response.highlight?.ok) {
+          showToast("Highlighted on page");
+        } else if (response.highlight && response.highlight.ok === false) {
+          showToast("Could not highlight target");
+        }
         // Play audio if available
         if (response.audio) {
           playAudio(response.audio);

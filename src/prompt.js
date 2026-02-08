@@ -117,6 +117,46 @@ ${pageBlock(page)}
 `.trim();
 }
 
+export function buildGuidedActionPrompt(page, question, actions = []) {
+  const q = (question || "").trim();
+  const trimmedActions = Array.isArray(actions) ? actions.slice(0, 40) : [];
+  const actionsBlock = JSON.stringify(trimmedActions, null, 2);
+
+  return `
+${APP_ROLE}
+
+Task: Help the user complete an action on this webpage.
+You must do two things:
+1) Give short, step-by-step instructions in plain language.
+2) Pick the single best clickable target from the provided action candidates to highlight.
+
+Return JSON ONLY. No markdown. No extra text.
+Use this exact schema:
+{
+  "answer": "Step 1... Step 2... Step 3...",
+  "target": {
+    "selector": "exact selector from candidates",
+    "label": "matching label from candidates",
+    "reason": "short reason"
+  }
+}
+
+Rules:
+- If no candidate matches, set "target" to null.
+- Never invent a selector. Use one exactly from candidates.
+- Keep answer under 120 words.
+- Use simple language for older or non-technical users.
+
+User request:
+"${q}"
+
+${pageBlock(page)}
+
+Action candidates (JSON):
+${actionsBlock}
+`.trim();
+}
+
 /**
  * Chunk summarization prompt (for long pages)
  * Use this for "map step": summarize each chunk into notes.

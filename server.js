@@ -7,7 +7,7 @@
 
 import 'dotenv/config';
 import http from 'http';
-import { generateText, isConfigured, buildSummaryPrompt, buildGuidePrompt, buildQuestionPrompt } from './src/index.js';
+import { generateText, isConfigured, buildSummaryPrompt, buildGuidePrompt, buildQuestionPrompt, buildGuidedActionPrompt } from './src/index.js';
 import { textToSpeech, isGradiumConfigured } from './src/lib/gradium.js';
 
 const PORT = 3000;
@@ -21,6 +21,25 @@ function pathname(req) {
   const u = req.url || '/';
   const i = u.indexOf('?');
   return i === -1 ? u : u.slice(0, i);
+}
+
+function parseJsonBody(raw) {
+  return JSON.parse(raw);
+}
+
+function extractJsonObject(text) {
+  const raw = String(text || "").trim();
+  const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    const candidate = cleaned.slice(start, end + 1);
+    return JSON.parse(candidate);
+  }
+  throw new Error("Model did not return valid JSON");
 }
 
 const server = http.createServer(async (req, res) => {
@@ -65,13 +84,56 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && (path === '/guide' || path === '/guide/')) {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+
+    let payload;
+    try {
+      payload = parseJsonBody(body);
+    } catch {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      return;
+    }
+
+    try {
+      const prompt = buildGuidedActionPrompt(
+        {
+          title: payload.title || 'Unknown',
+          url: payload.url || 'Unknown',
+          text: payload.text || '',
+          language: payload.language || 'en',
+        },
+        payload.question || '',
+        payload.actions || []
+      );
+      const raw = await generateText(prompt);
+      const parsed = extractJsonObject(raw);
+      const answer = parsed?.answer || "I can’t find that on this page.";
+      const target = parsed?.target || null;
+      res.writeHead(200);
+      res.end(JSON.stringify({ answer, target }));
+    } catch (err) {
+      console.error(err);
+      let msg = err.message || 'Gemini request failed';
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+        msg =
+          'Gemini rate limit reached. Wait a minute or check your quota at https://ai.google.dev/gemini-api/docs/rate-limits';
+      }
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: msg }));
+    }
+    return;
+  }
+
   if (req.method === 'POST' && (path === '/ask' || path === '/ask/')) {
     let body = '';
     for await (const chunk of req) body += chunk;
 
     let payload;
     try {
-      payload = JSON.parse(body);
+      payload = parseJsonBody(body);
     } catch {
       res.writeHead(400);
       res.end(JSON.stringify({ error: 'Invalid JSON' }));
@@ -154,6 +216,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`VoiceCare backend running at http://localhost:${PORT}`);
-  console.log('Endpoints: POST /ask, POST /summarize, POST /speak');
+  console.log('Endpoints: POST /ask, POST /guide, POST /summarize, POST /speak');
   console.log('Extension ready! Click the microphone or a suggestion chip to start.');
 });
