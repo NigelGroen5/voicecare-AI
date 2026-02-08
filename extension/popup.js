@@ -10,6 +10,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   let recognition = null;
   let recognitionActive = false;
 
+  function errorToText(err) {
+    if (!err) return "Unknown error";
+    if (typeof err === "string") return err;
+    const name = err.name || "Error";
+    const message = err.message || String(err);
+    return `${name}: ${message}`;
+  }
+
   // Initialize speech recognition if available
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -17,6 +25,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
+    recognition.onstart = () => {
+      recognitionActive = true;
+    };
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
@@ -74,42 +85,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      // Check permission state (helps debug no-prompt situations)
-      try {
-        const perm = await navigator.permissions.query({ name: "microphone" });
-        console.log("mic permission:", perm.state);
-        if (perm.state === "denied") {
-          showOutput(
-            "Microphone is blocked for Chrome.\n\nFix:\n1) Open chrome://settings/content/microphone\n2) Allow microphone + pick the correct device\n3) Reload the extension",
-            true
-          );
-          showToast("Mic blocked in settings");
-          return;
-        }
-      } catch {}
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("This browser does not support microphone capture");
+      }
 
-      // Request permission (must be from user click — you are, good)
+      // Force a real mic permission/device check before speech recognition.
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
 
       listening = true;
       micButton.classList.add("listening");
       statusEl.textContent = "Listening…";
       showToast("Listening…");
-
-      recognitionActive = true;
       recognition.start();
     } catch (err) {
-      console.error("Microphone permission error:", {
-        name: err.name,
-        message: err.message,
-        toString: err.toString(),
-        stack: err.stack
-      });
+      const details = errorToText(err);
+      console.error("Microphone permission error:", err);
 
-      showToast(`Mic failed: ${err.name}`);
+      if (err?.name === "NotAllowedError" && /dismissed/i.test(err?.message || "")) {
+        showToast("Mic permission dismissed");
+        showOutput(
+          "Microphone prompt was dismissed.\n\nOpening a setup tab so you can grant permission from a stable page.",
+          true
+        );
+        chrome.tabs.create({ url: chrome.runtime.getURL("mic-permission.html") });
+        listening = false;
+        micButton.classList.remove("listening");
+        statusEl.textContent = "Ready";
+        return;
+      }
+
+      showToast("Mic failed");
       showOutput(
-        `Mic failed: ${err.name}\n\nFix:\n1) Open chrome://settings/content/microphone\n2) Allow microphone + select the right device\n3) Close other apps using the mic\n4) Reload the extension`,
+        `Mic failed: ${details}\n\nFix:\n1) Open chrome://settings/content/microphone\n2) Allow microphone + select the right device\n3) Close other apps using the mic\n4) Reload the extension`,
         true
       );
 
