@@ -92,6 +92,28 @@ function buildHeuristicGuideAnswer(question, action) {
 
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'CHECK_URL') {
+    (async () => {
+      try {
+        const res = await fetch(BACKEND_URL + '/check-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: msg.url }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          sendResponse({ error: data.error || 'Backend error' });
+          return;
+        }
+        sendResponse({ safe: data.safe, threats: data.threats || [] });
+      } catch (e) {
+        console.error('URL check error:', e);
+        sendResponse({ safe: true, threats: [], error: e.message });
+      }
+    })();
+    return true;
+  }
+
   if (msg.action === 'GET_CURRENT_TAB_URL') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       sendResponse({ url: tabs[0]?.url || '' });

@@ -230,6 +230,10 @@ function highlightSelector(selector, note = "Click here") {
   return { ok: true };
 }
 
+// Check URL safety on page load
+checkUrlSafety();
+
+// Listen for request from popup/background
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "GET_PAGE_TEXT") {
     sendResponse({
@@ -250,3 +254,141 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 });
+
+// Check URL safety against Google Safe Browsing API
+function checkUrlSafety() {
+  const currentUrl = location.href;
+
+  // Skip checking for local files and extensions
+  if (currentUrl.startsWith('chrome://') ||
+      currentUrl.startsWith('chrome-extension://') ||
+      currentUrl.startsWith('file://') ||
+      currentUrl.startsWith('about:')) {
+    return;
+  }
+
+  chrome.runtime.sendMessage(
+    { action: 'CHECK_URL', url: currentUrl },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('URL check failed:', chrome.runtime.lastError);
+        return;
+      }
+
+      if (!response) {
+        console.error('No response from URL check');
+        return;
+      }
+
+      // If URL is not safe show warning
+      if (!response.safe && response.threats && response.threats.length > 0) {
+        showWarningOverlay(response.threats);
+      }
+    }
+  );
+}
+
+// Show full-page warning overlay for dangerous sites
+function showWarningOverlay(threats) {
+  if (document.getElementById('voicecare-warning-overlay')) {
+    return;
+  }
+
+  // Create warning overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'voicecare-warning-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #dc2626;
+    color: white;
+    z-index: 2147483647;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 20px;
+    box-sizing: border-box;
+  `;
+
+  // Build threat descriptions
+  const threatList = threats
+    .map(t => `<li style="margin: 8px 0;">${t.description}</li>`)
+    .join('');
+
+  overlay.innerHTML = `
+    <div style="max-width: 600px; text-align: center;">
+      <div style="font-size: 72px; margin-bottom: 20px;">⚠️</div>
+      <h1 style="font-size: 32px; margin: 0 0 16px 0; font-weight: 600;">
+        Dangerous Site Detected
+      </h1>
+      <p style="font-size: 18px; margin: 0 0 24px 0; line-height: 1.6;">
+        VoiceCare AI has detected that this website may be dangerous.
+      </p>
+      <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; margin-bottom: 32px;">
+        <h2 style="font-size: 20px; margin: 0 0 12px 0; font-weight: 600;">Threats Detected:</h2>
+        <ul style="text-align: left; font-size: 16px; line-height: 1.6; margin: 0; padding-left: 24px;">
+          ${threatList}
+        </ul>
+      </div>
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+        <button id="voicecare-go-back" style="
+          background: white;
+          color: #dc2626;
+          border: none;
+          padding: 14px 32px;
+          font-size: 16px;
+          font-weight: 600;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: transform 0.2s;
+        ">
+          Go Back to Safety
+        </button>
+        <button id="voicecare-proceed" style="
+          background: rgba(255,255,255,0.2);
+          color: white;
+          border: 2px solid white;
+          padding: 14px 32px;
+          font-size: 16px;
+          font-weight: 600;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: transform 0.2s;
+        ">
+          Proceed Anyway (Not Recommended)
+        </button>
+      </div>
+      <p style="font-size: 14px; margin: 24px 0 0 0; opacity: 0.9;">
+        Protected by VoiceCare AI and Google Safe Browsing
+      </p>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // button hover
+  const buttons = overlay.querySelectorAll('button');
+  buttons.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transform = 'scale(1.05)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'scale(1)';
+    });
+  });
+
+  // Go back button
+  document.getElementById('voicecare-go-back').addEventListener('click', () => {
+    window.history.back();
+  });
+
+  // Proceed Anyway button
+  document.getElementById('voicecare-proceed').addEventListener('click', () => {
+    overlay.remove();
+  });
+}

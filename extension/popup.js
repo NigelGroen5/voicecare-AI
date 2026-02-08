@@ -4,11 +4,72 @@ document.addEventListener("DOMContentLoaded", async () => {
   const chips = document.getElementById("chips");
   const toast = document.getElementById("toast");
   const outputEl = document.getElementById("output");
+  const safetyStatusEl = document.getElementById("safetyStatus");
 
   let listening = false;
   let toastTimer = null;
   let recognition = null;
   let recognitionActive = false;
+
+  // Check page safety status
+  async function checkPageSafety() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.url) {
+        updateSafetyStatus('unknown', '🔒', 'Unable to check this page');
+        return;
+      }
+
+      const url = tab.url;
+
+      if (url.startsWith('chrome://') ||
+          url.startsWith('chrome-extension://') ||
+          url.startsWith('file://') ||
+          url.startsWith('about:')) {
+        updateSafetyStatus('unknown', '🔒', 'System page - not checked');
+        return;
+      }
+
+      updateSafetyStatus('checking', '🔄', 'Checking page safety...');
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'CHECK_URL',
+        url: url
+      });
+
+      if (!response) {
+        updateSafetyStatus('unknown', '⚠️', 'Could not verify page safety');
+        return;
+      }
+
+      if (response.error) {
+        updateSafetyStatus('unknown', '⚠️', 'Safety check unavailable');
+        return;
+      }
+
+      // Update UI 
+      if (response.safe) {
+        updateSafetyStatus('safe', '✓', 'Safe - No threats detected');
+      } else if (response.threats && response.threats.length > 0) {
+        const threatCount = response.threats.length;
+        const plural = threatCount > 1 ? 'threats' : 'threat';
+        updateSafetyStatus('unsafe', '⚠️', `Dangerous - ${threatCount} ${plural} detected`);
+      } else {
+        updateSafetyStatus('unknown', '⚠️', 'Unable to verify safety');
+      }
+    } catch (error) {
+      console.error('Error checking page safety:', error);
+      updateSafetyStatus('unknown', '⚠️', 'Safety check failed');
+    }
+  }
+
+  function updateSafetyStatus(state, icon, text) {
+    safetyStatusEl.className = `safety-status ${state}`;
+    safetyStatusEl.querySelector('.safety-icon').textContent = icon;
+    safetyStatusEl.querySelector('.safety-text').textContent = text;
+  }
+
+  checkPageSafety();
 
   function errorToText(err) {
     if (!err) return "Unknown error";
