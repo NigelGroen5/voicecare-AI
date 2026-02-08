@@ -3,6 +3,12 @@ A voice-first Chrome extension that helps **elderly and accessibility-focused us
 
 ---
 
+## DEMO Link:
+
+https://www.youtube.com/watch?v=19XjsIS39Xw
+
+---
+
 ## 🚀 What is VoiceCare AI?
 
 VoiceCare AI lets users ask questions like:
